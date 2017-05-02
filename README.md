@@ -62,19 +62,20 @@ In VisualCastalia, the time for simulation, nodes and protocols definitions are 
 
 All configuration parameters for users are provided by ImageTransmition application. A description for each of those parameters is presented in the following table: 
 
-Parameter	Description
-packetHeaderOverhead	Size of packet header, in bytes
-constantDataPayload	Size of packet payload, in bytes
-imageFormat	Format of considered images (same format for all images). It may be JPEG, JPEG2000 or BMP
-originalImagesFolder	Folder of source images to be transmitted in a simulation. The simulation time is controlled by Castalia (sim-time) and thus images are transmitted in a loop sequence until the simulation ends (the same image may be transmitted several times).
-receivedImagesFolder	Folder where received images are saved. Those images can be viewed by users or processed for latency and PSNR results
-numImageSources	Indicates the number of...
-imageFrequency	It indicates the number of images (snapshots) transmitted by source nodes every second. It may be lower than 1
-selfGeneratedImage	If true, the transmitted images are automatically created by OpenCV. In other words, we may want to use VisualCastalia just to assess image transmissions, without concern to the images contents
-imgHeight	If selfGeneratedImage=true, it specifies the height of automatically generated images
-imgWidth	If selfGeneratedImage=true, it specifies the width of automatically generated images
-useColoredImage	If selfGeneratedImage=true, it specifies if automatically generated images will be colored (true)
-
+## Parameter and	Description
+| Parameter  |  Description |
+|---|---|
+| packetHeaderOverhead  | Size of packet header, in bytes  |
+| constantDataPayload  | Size of packet payload, in bytes  |
+| imageFormat  | Format of considered images (same format for all images). It may be only JPEG (Others formats not yet supported) |
+| originalImagesFolder  | Folder of source images to be transmitted in a simulation. The simulation time is controlled by Castalia (sim-time) and thus images are transmitted in a loop sequence until the simulation ends (the same image may be transmitted several times).
+receivedImagesFolder	Folder where received images are saved. Those images can be viewed by users or processed for latency and PSNR results  |
+| numImageSources  | Indicates the number of different images sent by the source nodes  |
+| imageFrequency  | It indicates the number of images (snapshots) transmitted by source nodes every second. It may be lower than 1
+selfGeneratedImage	If true, the transmitted images are automatically created by OpenCV. In other words, we may want to use VisualCastalia just to assess image transmissions, without concern to the images contents  |
+| selfGeneratedImage  | If selfGeneratedImage=true, it specifies the height of automatically generated images  |
+| imgWidth  | If selfGeneratedImage=true, it specifies the width of automatically generated images  |
+| useColoredImage  | If selfGeneratedImage=true, it specifies if automatically generated images will be colored (true)  |
 
 An example of part of a omnetpp.ini file is presentes as folows, highlighting configuration of ImageTransmission application: 
 
