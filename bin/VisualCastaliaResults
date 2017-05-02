@@ -1,0 +1,431 @@
+#!/bin/bash
+
+# Author: Lucas Vinicius dos Santos Assis
+# Universidade Estadual de Feira de Santana
+# IMAGE TRANSMISSION's ANALISER
+
+# PARSER OF PSNR FILE
+
+if [ "$1" == "-P" ] || [ "$1" == "-p" ] || [ "$1" == "--psnr" ]
+	then
+		while read line
+	do
+		# Get the corespondent node the line is related
+		originNode=`echo $line | cut -d ':' -f 1`
+		# Get the psnr information: related image and psnr value
+		psnr=`echo $line | cut -d ':' -f 2`
+
+		PSNRs[$originNode]+=$psnr@
+
+	done < Psnr-Trace.txt
+
+	if [ "$2" == "-A" ] || [ "$2" == "-a" ] || [ "$2" == "--all" ]
+		then
+		if [ "$#" == 2 ]
+			then
+			echo -e "\t === PSNR OF ALL NODES FOR VALID IMAGES ===" # DONE
+			for node in "${!PSNRs[@]}"
+				do
+					echo '================================================================='
+					echo -e '|' '\t' "\033[01;32mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mIMAGE NAME\033[01;37m" '\t' '|' '\t' "\033[01;32mLATENCY VALUE\033[01;37m" '\t''|'
+					echo '================================================================='
+					# echo "NODE: $node"
+					# echo "value: ${LATENCIES[$i]}"
+					IFS='@' read -ra INFO <<< "${PSNRs[$node]}"
+					for info in "${INFO[@]}"; do
+						# echo $info
+						IFS='|' read -ra IMAGEPSNRs <<< "$info"
+						# printf '%s\n' "${IMAGELATENCY[@]}"
+						if [ ${IMAGEPSNRs[1]} == "-99" ]
+							then
+							echo -e '|' '\t' $node '\t' '|' '\t' ${IMAGEPSNRs[0]} '\t' '|' '\t' "\033[01;31mCORRUPTED\033[01;37m" '\t''|'
+						elif [ ${IMAGEPSNRs[1]} == "-2" ]
+							then
+							echo -e '|' '\t' $node '\t' '|' '\t' ${IMAGEPSNRs[0]} '\t' '|' '\t' "\033[01;35mFILE NOT FOUND\033[01;37m" '\t''|'
+						else
+							echo -e '|' '\t' $node '\t' '|' '\t' ${IMAGEPSNRs[0]} '\t' '|' '\t' ${IMAGEPSNRs[1]} '\t''|'
+						fi
+						echo '-----------------------------------------------------------------'
+					    # echo -e $node '\t\t' $IMAGELATENCY[0] '\t\t' $IMAGELATENCY[1]
+					done
+				done
+		else
+			if [ "$3" == "-A" ] || [ "$3" == "-a" ] || [ "$3" == "--average" ] || [ "$3" == "--avg" ]
+				then
+				echo -e "\t === AVERAGE PSNR OF ALL NODES FOR VALID IMAGES ==="
+
+				for node in "${!PSNRs[@]}"
+				do
+
+					echo '================================================='
+					echo -e '|' '\t' "\033[01;34mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mAVERAGE PSNR VALUE\033[01;37m" '\t''|'
+					echo '================================================='
+
+					IFS='@' read -ra INFO <<< "${PSNRs[$node]}"
+					total=0
+					for info in "${INFO[@]}"; do
+						IFS='|' read -ra IMAGEPSNRs <<< "$info"
+						if ! [ ${IMAGEPSNRs[1]} == -99 ] && ! [ ${IMAGEPSNRs[1]} == -2 ]
+							then
+							total=$(echo "$total + ${IMAGEPSNRs[1]}"|bc -l)
+						fi
+
+					done
+					size=${#INFO[@]}
+					# Avoid division by Zero
+					if [ $size == 0 ] || [ $total == 0 ]
+					then
+						avg=0
+					else
+						avg=$(echo "$total / $size"|bc -l)
+					fi
+					echo -e '|' '\t' $node '\t' '|' '\t' $avg '\t' '|'
+					echo '-------------------------------------------------'
+					echo -e $node'\t'$node'\t'$avg >> average-psnr.dat
+				done
+				if [ "$#" == "4" ]
+					then
+						if [ "$4" == "-g" ] || [ "$4" == "-G" ]
+							then
+								echo -e "\n\nGNUPLOT Feature - Exit with Ctrl-C"
+								echo > script.p
+								echo "set boxwidth 0.5" >> script.p
+								echo "set style fill solid" >> script.p
+								echo "set title 'Average PSNR for All Nodes'" >> script.p
+					      echo "set xlabel 'Node Number'" >> script.p
+					      echo "set ylabel 'Average PSNR Value (dB)'" >> script.p
+								echo "plot 'average-psnr.dat' using 1:3:xtic(2) with boxes title 'Average PSNR'" >> script.p
+								echo "pause -1" >> script.p
+								gnuplot -e "load 'script.p"
+								rm script.p
+								rm average-psnr.dat
+						else
+							echo -e "\n\nInvalid #4 argument: Used ["$4"]"
+							echo -e "Try '-g' to PLOT Average PSNR Charts for all Nodes\n"
+						fi
+				fi
+			else
+				echo -e "\n\nInvalid #3 argument: Used ["$3"]"
+				echo -e "Try '--avg' to PLOT Average PSNR for all Nodes\n"
+			fi
+		fi
+	elif [[ $2 =~ ^-?[0-9]+$ ]]
+		then
+		node_number=`echo $2 | cut -d '-' -f 2`
+		if [ "$#" == 2 ]
+			then
+				echo -e "\t === PSNR OF A SINGLE NODE ==="
+				echo '================================================================='
+				echo -e '|' '\t' "\033[01;32mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mIMAGE NAME\033[01;37m" '\t' '|' '\t' "\033[01;32mPSNR VALUE\033[01;37m" '\t''|'
+				echo '================================================================='
+				# echo "NODE: $node"
+				# echo "value: ${LATENCIES[$i]}"
+				IFS='@' read -ra INFO <<< "${PSNRs[$node_number]}"
+				for info in "${INFO[@]}"; do
+					# echo $info
+					IFS='|' read -ra IMAGEPSNRs <<< "$info"
+					# printf '%s\n' "${IMAGELATENCY[@]}"
+					if [ ${IMAGEPSNRs[1]} == "-99" ]
+							then
+							echo -e '|' '\t' $node_number '\t' '|' '\t' ${IMAGEPSNRs[0]} '\t' '|' '\t' "\033[01;31mCORRUPTED\033[01;37m" '\t''|'
+						elif [ ${IMAGEPSNRs[1]} == "-2" ]
+							then
+							echo -e '|' '\t' $node_number '\t' '|' '\t' ${IMAGEPSNRs[0]} '\t' '|' '\t' "\033[01;35mFILE NOT FOUND\033[01;37m" '\t''|'
+						else
+							echo -e '|' '\t' $node_number '\t' '|' '\t' ${IMAGEPSNRs[0]} '\t' '|' '\t' ${IMAGEPSNRs[1]} '\t''|'
+					fi
+					echo '-----------------------------------------------------------------'
+				    # echo -e $node '\t\t' $IMAGELATENCY[0] '\t\t' $IMAGELATENCY[1]
+				done
+
+		elif [ "$3" == "-A" ] || [ "$3" == "-a" ] || [ "$3" == "--average" ] ||  [ "$3" == "--avg" ]
+			then
+				echo -e "\t === AVERAGE PSNR OF A SINGLE NODE FOR VALID IMAGES ==="
+				echo '================================================='
+				echo -e '|' '\t' "\033[01;34mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mAVERAGE PSNR VALUE\033[01;37m" '\t''|'
+				echo '================================================='
+
+				IFS='@' read -ra INFO <<< "${PSNRs[$node_number]}"
+				total=0
+				for info in "${INFO[@]}"; do
+					IFS='|' read -ra IMAGEPSNRs <<< "$info"
+					if ! [ ${IMAGEPSNRs[1]} == -99 ] && ! [ ${IMAGEPSNRs[1]} == -2 ]
+						then
+							total=$(echo "$total + ${IMAGEPSNRs[1]}"|bc -l)
+					fi
+
+				done
+				size=${#INFO[@]}
+				# avg=$(echo "$total / $size"|bc)
+				# Avoid division by Zero
+				if [ $size == 0 ] || [ $total == 0 ]
+					then
+						avg=0
+				else
+					avg=$(echo "$total / $size"|bc -l)
+				fi
+				# calc=`echo $total $size | awk '{ printf "%f", $1 + $2 }'`
+				echo -e '|' '\t' $node_number '\t' '|' '\t' $avg '\t' '|'
+				echo '-------------------------------------------------'
+			else
+				echo -e "\n\nInvalid #3 argument: Used ["$3"]"
+				echo -e "Try '--avg' to show average PSNR for the choosen Node\n"
+		fi
+	else
+		echo -e "\n\nInvalid #2 argument: Used ["$2"]"
+		echo -e "Try '--all' to show PSNRs of all Nodes or '-1', '-2' etc to show information of a single Node\n"
+	fi
+# PARSER OF LATENCY FILE
+elif [ "$1" == "-L" ] || [ "$1" == "-l" ] || [ "$1" == "--latency" ]
+	then
+	while read line
+	do
+		# Get the corespondent node the line is related
+		originNode=`echo $line | cut -d ':' -f 1`
+		# Get the latency information: related image and latency value
+		latency=`echo $line | cut -d ':' -f 2`
+
+		LATENCIES[$originNode]+=$latency@
+
+	done < Latency-Trace.txt
+
+	if [ "$2" == "-A" ] || [ "$2" == "-a" ] || [ "$2" == "--all" ]
+		then
+		if [ "$#" == 2 ]
+			then
+			echo -e "\t === LATENCY OF ALL NODES ==="
+			for node in "${!LATENCIES[@]}"
+				do
+					echo '================================================================='
+					echo -e '|' '\t' "\033[01;32mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mIMAGE NAME\033[01;37m" '\t' '|' '\t' "\033[01;32mLATENCY VALUE\033[01;37m" '\t''|'
+					echo '================================================================='
+					# echo "NODE: $node"
+					# echo "value: ${LATENCIES[$i]}"
+					IFS='@' read -ra INFO <<< "${LATENCIES[$node]}"
+					for info in "${INFO[@]}"; do
+						# echo $info
+						IFS='|' read -ra IMAGELATENCY <<< "$info"
+						# printf '%s\n' "${IMAGELATENCY[@]}"
+						echo -e '|' '\t' $node '\t' '|' '\t' ${IMAGELATENCY[0]} '\t' '|' '\t' ${IMAGELATENCY[1]} '\t''|'
+						echo '-----------------------------------------------------------------'
+					    # echo -e $node '\t\t' $IMAGELATENCY[0] '\t\t' $IMAGELATENCY[1]
+					done
+				done
+		else
+			if [ "$3" == "-A" ] || [ "$3" == "-a" ] || [ "$3" == "--average" ] || [ "$3" == "--avg" ]
+				then
+				echo -e "\t === AVERAGE LATENCY OF ALL NODES ==="
+
+				for node in "${!LATENCIES[@]}"
+				do
+
+					echo '================================================='
+					echo -e '|' '\t' "\033[01;34mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mAVERAGE LATENCY VALUE\033[01;37m" '\t''|'
+					echo '================================================='
+
+					IFS='@' read -ra INFO <<< "${LATENCIES[$node]}"
+					total=0
+					for info in "${INFO[@]}"; do
+						IFS='|' read -ra IMAGELATENCY <<< "$info"
+						total=$(echo "$total + ${IMAGELATENCY[1]}"|bc -l)
+
+					done
+					size=${#INFO[@]}
+					# avg=$(echo "$total / $size"|bc)
+					if [ $size == 0 ]
+						then
+						avg=0
+					else
+						avg=$(echo "$total / $size"|bc -l)
+					fi
+					# calc=`echo $total $size | awk '{ printf "%f", $1 + $2 }'`
+					echo -e '|' '\t' $node '\t' '|' '\t' $avg '\t' '|'
+					echo '-------------------------------------------------'
+					echo -e $node'\t'$node'\t'$avg >> average-latency.dat
+				done
+				if [ "$#" == "4" ]
+					then
+						if [ "$4" == "-g" ] || [ "$4" == "-G" ] || [ "$4" == "--graphic" ]
+							then
+								echo -e "\n\nGNUPLOT Feature - Exit with Ctrl-C"
+								echo > script.p
+								echo "set boxwidth 0.5" >> script.p
+								echo "set style fill solid" >> script.p
+								echo "set title 'Average Latency for All Nodes'" >> script.p
+					      echo "set xlabel 'Node Number'" >> script.p
+					      echo "set ylabel 'Average Latency Value (s)'" >> script.p
+								echo "plot 'average-latency.dat' using 1:3:xtic(2) with boxes title 'Average Latency'" >> script.p
+								echo "pause -1" >> script.p
+								gnuplot -e "load 'script.p"
+								rm script.p
+								rm average-latency.dat
+						else
+							echo -e "\n\nInvalid #4 argument: Used ["$4"]"
+							echo -e "Try '-g' to PLOT Average LATENCY Charts for all Nodes\n"
+						fi
+				fi
+			elif [ "$3" == "-S" ] || [ "$3" == "-s" ] || [ "$3" == "--sum" ]
+				then
+				echo -e "\t === SUM LATENCY OF ALL NODES ==="
+				for node in "${!LATENCIES[@]}"
+				do
+					echo '================================================='
+					echo -e '|' '\t' "\033[01;34mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mSUM OF LATENCY VALUES\033[01;37m" '\t''|'
+					echo '================================================='
+
+					IFS='@' read -ra INFO <<< "${LATENCIES[$node]}"
+
+					total=0
+					for info in "${INFO[@]}"; do
+						# echo $info
+						IFS='|' read -ra IMAGELATENCY <<< "$info"
+						total=$(echo "$total + ${IMAGELATENCY[1]}"|bc  -l)
+					done
+					echo -e '|' '\t' $node '\t' '|' '\t' $total '\t' '|'
+					echo '-------------------------------------------------'
+					echo -e $node'\t'Node#$node'\t'$total >> sum-latency.dat
+				done
+				if [ "$#" == "4" ]
+					then
+						if [ "$4" == "-g" ] || [ "$4" == "-G" ] || [ "$4" == "--graphic" ]
+							then
+								echo -e "\n\nGNUPLOT Feature - Exit with Ctrl-C"
+								echo > script.p
+								echo "set boxwidth 0.5" >> script.p
+								echo "set style fill solid" >> script.p
+								echo "set title 'Sum of Latency for All Nodes'" >> script.p
+					      echo "set xlabel 'Node Number'" >> script.p
+					      echo "set ylabel 'Sum of Latency Value (s)'" >> script.p
+								echo "plot 'sum-latency.dat' using 1:3:xtic(2) with boxes title 'Sum of Latency'" >> script.p
+								echo "pause -1" >> script.p
+								gnuplot -e "load 'script.p"
+								rm script.p
+								rm sum-latency.dat
+						else
+							echo -e "\n\nInvalid #4 argument: Used ["$4"]"
+							echo -e "Try '-g' to PLOT Sum of LATENCY Charts for all Nodes\n"
+						fi
+				fi
+			else
+				echo -e "\n\nInvalid #3 argument: Used ["$3"]"
+				echo -e "Try '--avg' to calculate the average latency for all Nodes or -s to calculate the sum of latencies for all Nodes\n"
+			fi
+		fi
+	elif [[ $2 =~ ^-?[0-9]+$ ]]
+		then
+		node_number=`echo $2 | cut -d '-' -f 2`
+		if [ "$#" == 2 ]
+			then
+				echo '================================================================='
+				echo -e '|' '\t' "\033[01;32mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mIMAGE NAME\033[01;37m" '\t' '|' '\t' "\033[01;32mLATENCY VALUE\033[01;37m" '\t''|'
+				echo '================================================================='
+				# echo "NODE: $node"
+				# echo "value: ${LATENCIES[$i]}"
+				IFS='@' read -ra INFO <<< "${LATENCIES[$node_number]}"
+				for info in "${INFO[@]}"; do
+					# echo $info
+					IFS='|' read -ra IMAGELATENCY <<< "$info"
+					# printf '%s\n' "${IMAGELATENCY[@]}"
+					echo -e '|' '\t' $node_number '\t' '|' '\t' ${IMAGELATENCY[0]} '\t' '|' '\t' ${IMAGELATENCY[1]} '\t''|'
+					echo '-----------------------------------------------------------------'
+				    # echo -e $node '\t\t' $IMAGELATENCY[0] '\t\t' $IMAGELATENCY[1]
+				done
+
+		elif [ "$3" == "-A" ] || [ "$3" == "-a" ] || [ "$3" == "--average" ] ||  [ "$3" == "--avg" ]
+			then
+				echo -e "\t === AVERAGE LATENCY OF A SINGLE NODE ==="
+				echo '================================================='
+				echo -e '|' '\t' "\033[01;34mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mAVERAGE LATENCY VALUE\033[01;37m" '\t''|'
+				echo '================================================='
+
+				IFS='@' read -ra INFO <<< "${LATENCIES[$node_number]}"
+				total=0
+				for info in "${INFO[@]}"; do
+					IFS='|' read -ra IMAGELATENCY <<< "$info"
+					total=$(echo "$total + ${IMAGELATENCY[1]}"|bc -l)
+
+				done
+				size=${#INFO[@]}
+				# avg=$(echo "$total / $size"|bc)
+				if [ $size == 0 ]
+					then
+						avg=0
+				else
+					avg=$(echo "$total / $size"|bc -l)
+				fi
+				# calc=`echo $total $size | awk '{ printf "%f", $1 + $2 }'`
+				echo -e '|' '\t' $node_number '\t' '|' '\t' $avg '\t' '|'
+				echo '-------------------------------------------------'
+
+		elif [ "$3" == "-S" ] || [ "$3" == "-s" ] || [ "$3" == "--sum" ]
+			then
+				echo -e "\t === SUM OF LATENCY OF A SINGLE NODE ==="
+				echo '================================================='
+				echo -e '|' '\t' "\033[01;34mNODE\033[01;37m" '\t' '|' '\t' "\033[01;32mSUM OF LATENCY VALUES\033[01;37m" '\t''|'
+				echo '================================================='
+
+				IFS='@' read -ra INFO <<< "${LATENCIES[$node_number]}"
+
+				total=0
+				for info in "${INFO[@]}"; do
+					# echo $info
+					IFS='|' read -ra IMAGELATENCY <<< "$info"
+					total=$(echo "$total + ${IMAGELATENCY[1]}"|bc)
+				done
+				echo -e '|' '\t' $node_number '\t' '|' '\t' $total '\t' '|'
+				echo '-------------------------------------------------'
+		else
+			echo -e "\n\nInvalid #3 argument: Used ["$3"]"
+			echo -e "Try '--avg' to calculate the average latency for choosen Node or '-s' to calculate the latency Sum of choosen Node\n"
+		fi
+	else
+		echo -e "\n\nInvalid #2 argument: Used ["$2"]"
+		echo -e "Try '--all' to show latency of all Nodes or '-1', '-2' etc to show information of a single Node\n"
+	fi
+
+elif [ "$1" == "-g" ] || [ "$1" == "-G" ] || [ "$1" == "--graphic" ]
+	then
+		if [ "$2" == "-P" ] || [ "$2" == "-p" ] || [ "$2" == "--psnr" ]
+			then
+				echo "Show PSNRs graphics"
+		elif [ "$2" == "-L" ] || [ "$2" == "-l" ] || [ "$2" == "--latency" ]
+			then
+				echo "Show latency graphics"
+		else
+			echo -e "\n\nInvalid #2 argument: Used ["$2"]"
+			echo -e "Try '-L' for Latency or '-P' for PSNR Calculus\n"
+		fi
+
+elif [ "$1" == "-h" ] || [ "$1" == "-H" ] || [ "$1" == "--help" ]
+	then
+	echo -e "\t\t === PROJECT VISUAL CASTALIA ===\n"
+	echo -e "* MANUAL OF VISUAL CASTALIA RESULTS SCRIPT\n"
+	echo -e "This script currently is used to analyse the results of simulation using ImageTransmission Application\n"
+	echo -e "\t\t === COMMAND LIST ==="
+	echo -e "\n** First Argument"
+	echo -e -P -p --psnr"\t\tSet PSNR Trace File"
+	echo -e -L -l --latency"\t\tSet Latency Trace File"
+	echo -e -h -H --help"\t\tOpen HELP MENU"
+	echo -e "\n** Second Argument"
+	echo -e --all -a -A"\t\tShow choosen Information of ALL Nodes"
+	echo -e -1 -2 [...] -n"\t\tShow choosen Information of choosen Node"
+	echo -e "\n** Third Argument"
+	echo -e -s -S --sum"\t\tCalculate the sum of choosen information (Latency only)"
+	echo -e -a -A --avg"\t\tCalculate the Arithmetic Mean of choosen information"
+	echo -e "\n** Forth Argument"
+	echo -e -g -G --graphic"\t\tPlot Graphics for the choosen Information (PSNR and Latency Arithmetic Mean of All Nodes)"
+else
+	echo -e "\n\nInvalid #1 argument: Used ["$1"]"
+	echo -e "Try '-L' for Latency, '-P' for PSNR Calculus or '-G' for printing Graphics\n"
+fi
+
+#array=(a b c d e)
+#cnt=${#array[@]}
+#for ((i=0;i<cnt;i++)); do
+#    array[i]="${array[i]}$i"
+#    echo "${array[i]}"
+#done
+
+#my_array=(one two three)
+
+#printf '%s\n' "${my_array[@]}"
