@@ -214,16 +214,8 @@ SinkNodeManager.cc and SinkNodeManager.h
   $ export PATH=$PATH:$HOME/name_of_VisualCastalia_directory_location/bin
 ```
    
-
 4 - Close and Reopen the terminal 
 
-Download
-
-Note: the new VisualCastalia result scripts are still under development (not all functions are implemented). 
-
-The VisualCastalia extension can be downloaded HERE 
-
-The VisualCastalia extension (bundled with Castalia) can be downloaded HERE 
 
 References
 
